@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class TxnResponse {
-    private String txnStatusId;
+    private String txnStatus;
     private String txnReference;
     private String redirectUrl;
 
