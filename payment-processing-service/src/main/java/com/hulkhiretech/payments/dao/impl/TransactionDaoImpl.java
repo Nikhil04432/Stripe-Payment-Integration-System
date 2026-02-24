@@ -12,6 +12,8 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 @Slf4j
 @RequiredArgsConstructor
@@ -94,5 +96,25 @@ public class TransactionDaoImpl implements TransactionDao {
 		log.info("Fetched transaction entity: {}", txnEntity);
 		return txnEntity;
 	}
+
+    @Override
+    public List<TransactionEntity> findAllByStatusId(Integer txnStatusId) {
+        log.info("Fetching transactions with txnStatusId: {}", txnStatusId);
+
+        String sql = "SELECT * FROM payments.`Transaction` "
+                + "WHERE txnStatusId = :txnStatusId";
+
+        MapSqlParameterSource params = new MapSqlParameterSource();
+        params.addValue("txnStatusId", txnStatusId);
+
+        List<TransactionEntity> transactions = jdbcTemplate.query(
+                sql,
+                params,
+                new BeanPropertyRowMapper<>(TransactionEntity.class)
+        );
+
+        log.info("Fetched {} transactions with status: {}", transactions.size(), txnStatusId);
+        return transactions;
+    }
 
 }

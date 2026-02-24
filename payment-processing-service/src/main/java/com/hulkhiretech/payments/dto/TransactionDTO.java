@@ -4,6 +4,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.security.Timestamp;
+import java.time.LocalDateTime;
 
 @Data
 public class TransactionDTO {
@@ -25,6 +26,7 @@ public class TransactionDTO {
     private String errorMessage;
     private Timestamp creationDate;
     private Integer retryCount;
+
 
 }
 

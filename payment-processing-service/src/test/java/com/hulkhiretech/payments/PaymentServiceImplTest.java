@@ -61,7 +61,7 @@ class PaymentServiceImplTest {
         // Assert
         assertNotNull(response);
         assertNotNull(response.getTxnReference());
-        assertEquals(TransactionStatusEnum.CREATED.name(), response.getTxnStatusId());
+        assertEquals(TransactionStatusEnum.CREATED.name(), response.getTxnStatus());
 
         // Verify interactions
         verify(modelMapper).map(request, TransactionDTO.class);
