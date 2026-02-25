@@ -10,7 +10,7 @@ public class PaymentReconScheduler {
 
     private final ReconService reconService;
 
-    @Scheduled(fixedDelay = 3 * 60 * 1000) // 15 minutes
+    @Scheduled(fixedDelay = 15 * 60 * 1000) // 15 minutes
     public void runRecon() {
         reconService.reconcilePendingTransactions();
     }

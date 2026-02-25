@@ -14,6 +14,13 @@ public interface TransactionDao {
 
     public List<TransactionEntity> findAllByStatusId(Integer txnStatusId);
 
+    // -----------------------------------------------------------------------
+    // NEW METHOD: updates ONLY the retryCount column for a given txnReference
+    // Used by ReconService when payment is still UNPAID — we don't change the
+    // status (stays PENDING), we just record that we checked one more time.
+    // -----------------------------------------------------------------------
+    public Integer updateRetryCountByTxnReference(TransactionEntity txnEntity);
+
 
 
 }

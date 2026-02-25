@@ -117,4 +117,32 @@ public class TransactionDaoImpl implements TransactionDao {
         return transactions;
     }
 
+    // -----------------------------------------------------------------------
+    // NEW METHOD: Updates ONLY the retryCount column.
+    //
+    // WHY a separate method?
+    //   - updateTransactionStatusDetailsByTxnReference() updates txnStatusId
+    //     + providerReference. We don't want to touch those here.
+    //   - In recon, when payment is still UNPAID, the status stays PENDING.
+    //     We only want to record "we checked one more time" = retryCount++
+    //   - Keeping SQL narrow (updates only what's needed) is safer and clearer.
+    // -----------------------------------------------------------------------
+    @Override
+    public Integer updateRetryCountByTxnReference(TransactionEntity txnEntity) {
+        log.info("Updating retryCount for txnReference={} to retryCount={}",
+                txnEntity.getTxnReference(), txnEntity.getRetryCount());
+
+        // SQL: only update the retryCount column, nothing else
+        String sql = "UPDATE payments.`Transaction` SET retryCount = :retryCount "
+                + "WHERE txnReference = :txnReference";
+
+        MapSqlParameterSource params = new MapSqlParameterSource();
+        params.addValue("retryCount", txnEntity.getRetryCount());
+        params.addValue("txnReference", txnEntity.getTxnReference());
+
+        int rowsUpdated = jdbcTemplate.update(sql, params);
+        log.info("retryCount updated. Rows affected: {}", rowsUpdated);
+        return rowsUpdated;
+    }
+
 }
