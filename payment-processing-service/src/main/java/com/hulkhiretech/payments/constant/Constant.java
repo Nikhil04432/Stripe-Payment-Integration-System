@@ -11,5 +11,9 @@ public class Constant {
     public static final String ERROR_CODE = "errorCode";
 
     public static final int MAX_RETRY_COUNT = 3;
+    // Queue name: payment-processing-service publishes here
+    // merchant-system (consumer) subscribes to this queue
+    public static final String PAYMENT_NOTIFICATION_QUEUE = "payment.notification.queue";
+
 
 }

@@ -1,5 +1,7 @@
 package com.hulkhiretech.payments.service.impl.processor;
 
+import com.hulkhiretech.payments.activemq.payload.PaymentNotificationMessage;
+import com.hulkhiretech.payments.activemq.producer.MerchantNotificationProducer;
 import com.hulkhiretech.payments.dao.interfaces.TransactionDao;
 import com.hulkhiretech.payments.dto.TransactionDTO;
 import com.hulkhiretech.payments.entity.TransactionEntity;
@@ -21,6 +23,8 @@ public class FailedStatusProcessor implements TxnStatusProcessor {
 	
 	private final PaymentProcessorHelper paymentProcessorHelper;
 
+    private final MerchantNotificationProducer merchantNotificationProducer;
+
 	@Override
 	public TransactionDTO processStatus(TransactionDTO txnDto) {
 		log.info("Processing FAILED status for txnDto: {}", txnDto);
@@ -40,8 +44,30 @@ public class FailedStatusProcessor implements TxnStatusProcessor {
 		
 		log.info("Updated transaction status successfully for txnReference: {}", 
 				txnDto.getTxnReference());
+
+        publishMerchantNotification(txnDto);
 		
 		return txnDto;
 	}
+
+    private void publishMerchantNotification(TransactionDTO txnDto) {
+
+        try{
+            PaymentNotificationMessage message = PaymentNotificationMessage.builder()
+                    .txnReference(txnDto.getTxnReference())
+                    .merchantTransactionReference(txnDto.getMerchantTransactionReference())
+                    .txnStatus("FAILED")
+                    .amount(txnDto.getAmount())
+                    .currency(txnDto.getCurrency())
+                    .build();
+
+            // This will send the message to ActiveMQ queue, and merchant system will consume it to update their order status.
+            merchantNotificationProducer.sendPaymentNotification(message);
+
+        }catch (Exception e){
+            log.error("Failed to publish payment notification to MQ for txnReference: {}. Error: {}",
+                    txnDto.getTxnReference(), e.getMessage(), e);
+        }
+    }
 	
 }
