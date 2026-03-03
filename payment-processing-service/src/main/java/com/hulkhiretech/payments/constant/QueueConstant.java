@@ -11,5 +11,6 @@ public class QueueConstant {
 
     // Queue name: payment-processing-service publishes here
     // merchant-system (consumer) subscribes to this queue
-    public static final String PAYMENT_NOTIFICATION_QUEUE = "payment.notification.queue";
+    public static final String PAYMENT_NOTIFICATION_QUEUE = "payment.notification.queue";  //  this is the queue name
+    // that both producer and consumer use to send/receive messages. It should be the same in both places.
 }
