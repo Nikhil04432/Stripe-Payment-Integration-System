@@ -2,7 +2,7 @@ package com.hulkhiretech.payments.http;
 
 import com.hulkhiretech.payments.constant.ErrorCodeEnum;
 import com.hulkhiretech.payments.exception.ProcessingException;
-import jakarta.annotation.PostConstruct;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +25,7 @@ public class HttpServiceEngine {
         log.info("restClient object created in HttpServiceEngine: {}", restClient);
     }
 
-
+    @CircuitBreaker(name = "payment-processing-service", fallbackMethod = "fallbackProcessPayment")
     public ResponseEntity<String> makeHttpCall( HttpRequest httpRequest) {
         log.info(" making http call ");
 
@@ -70,4 +70,15 @@ public class HttpServiceEngine {
             );
         }
     }
+
+    public ResponseEntity<String> fallbackProcessPayment(HttpRequest httpRequest, Throwable t) {
+        // Handle fallback logic here
+        log.error("Fallback method called due to: {}", t.getMessage(), t);
+        throw new ProcessingException(
+                ErrorCodeEnum.UNABLE_TO_CONNECT_TO_STRIPE_PROVIDER.getErrorCode(),
+                ErrorCodeEnum.UNABLE_TO_CONNECT_TO_STRIPE_PROVIDER.getErrorMessage(),
+                HttpStatus.SERVICE_UNAVAILABLE
+        );
+    }
+
 }

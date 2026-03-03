@@ -76,7 +76,7 @@ public class MerchantNotificationConsumer {
     // Here we just log it for verification.
     // -----------------------------------------------------------------------
     private void handleSuccess(PaymentNotificationMessage message) {
-        log.info("[MERCHANT CONSUMER] ✅ Payment SUCCESS received");
+        log.info("[MERCHANT CONSUMER]  Payment SUCCESS received");
         log.info("[MERCHANT CONSUMER] txnRef={} | merchantRef={} | amount={} {}",
                 message.getTxnReference(),
                 message.getMerchantTransactionReference(),
@@ -92,7 +92,7 @@ public class MerchantNotificationConsumer {
     //   - Release any reserved inventory
     // -----------------------------------------------------------------------
     private void handleFailed(PaymentNotificationMessage message) {
-        log.info("[MERCHANT CONSUMER] ❌ Payment FAILED received");
+        log.info("[MERCHANT CONSUMER]  Payment FAILED received");
         log.info("[MERCHANT CONSUMER] txnRef={} | merchantRef={} | errorCode={} | errorMessage={}",
                 message.getTxnReference(),
                 message.getMerchantTransactionReference(),
