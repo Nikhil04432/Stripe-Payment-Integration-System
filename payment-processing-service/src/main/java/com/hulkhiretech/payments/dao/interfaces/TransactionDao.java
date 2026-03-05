@@ -3,6 +3,7 @@ package com.hulkhiretech.payments.dao.interfaces;
 import com.hulkhiretech.payments.entity.TransactionEntity;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface TransactionDao {
 	
@@ -20,6 +21,23 @@ public interface TransactionDao {
     // status (stays PENDING), we just record that we checked one more time.
     // -----------------------------------------------------------------------
     public Integer updateRetryCountByTxnReference(TransactionEntity txnEntity);
+
+    // -----------------------------------------------------------------------
+    // IDEMPOTENCY CHECK METHOD
+    //
+    // WHY Optional<TransactionEntity> instead of TransactionEntity?
+    //
+    // jdbcTemplate.queryForObject() throws EmptyResultDataAccessException
+    // if no row is found. We don't want an exception just because no duplicate
+    // exists — that is a normal case (first-time request).
+    //
+    // Optional<> cleanly represents "record exists" vs "record does not exist"
+    // without throwing exceptions. Caller checks:
+    //   optional.isPresent() → duplicate found → return existing response
+    //   optional.isEmpty()   → fresh request   → proceed normally
+    // -----------------------------------------------------------------------
+    Optional<TransactionEntity> findByMerchantTransactionReference(
+            String merchantTransactionReference);
 
 
 

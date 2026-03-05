@@ -20,6 +20,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -37,6 +38,30 @@ public class PaymentServiceImpl implements PaymentService {
     public TxnResponse createTxn(CreateTxnRequest createTxnRequest) {
         log.info("Creating payment transaction request: {}", createTxnRequest);
 
+        // ---------------------------------------------------------------
+        // IDEMPOTENCY CHECK
+        //
+        // WHAT: Before doing anything, check if this merchantTransactionReference
+        // already exists in our DB.
+        //
+        // WHY: Merchant might send the same request twice due to:
+        //   - Network timeout on their side (they retry thinking it failed)
+        //   - Double-click on Pay button
+        //   - Their own retry logic
+        //
+        // Without this check: 2 transactions created for same order = overcharge risk
+        // With this check: 2nd request gets same response as 1st = safe
+        //
+        // HOW: merchantTransactionReference is merchant's own unique order ID.
+        // Same order always has same reference. Perfect idempotency key.
+        // ---------------------------------------------------------------
+        TxnResponse existingTxnDto = idempotencyCheck(createTxnRequest);
+        if (existingTxnDto != null) return existingTxnDto;
+
+        // ---------------------------------------------------------------
+        // FRESH REQUEST - no duplicate found, proceed normally
+        // ---------------------------------------------------------------
+        log.info("Fresh request. Proceeding with new transaction creation.");
 
         TransactionDTO txnDto = modelMapper.map(createTxnRequest, TransactionDTO.class);
         log.info(" Mapped TransactionDTO txnDto : {}", txnDto);
@@ -59,6 +84,37 @@ public class PaymentServiceImpl implements PaymentService {
         log.info("Created CreateTxnResponse: {}", createTxnResponse);
 
         return createTxnResponse;
+    }
+
+    private TxnResponse idempotencyCheck(CreateTxnRequest createTxnRequest) {
+        Optional<TransactionEntity> existingTxn = transactionDao
+                .findByMerchantTransactionReference(
+                        createTxnRequest.getMerchantTransactionReference());
+
+        if (existingTxn.isPresent()) {
+            log.info("Idempotent request detected for merchantTransactionReference: {}. "
+                            + "Returning existing response.",
+                    createTxnRequest.getMerchantTransactionReference());
+
+            // Convert existing entity to DTO and return same response
+            // Merchant gets consistent result - they won't know it was duplicate
+            TransactionDTO existingTxnDto = modelMapper.map(
+                    existingTxn.get(), TransactionDTO.class);
+
+            return buildTxnResponse(existingTxnDto);
+        }
+        return null;
+    }
+
+    // ---------------------------------------------------------------
+    // HELPER: builds TxnResponse from TransactionDTO
+    // Extracted to avoid code duplication between fresh and duplicate paths.
+    // ---------------------------------------------------------------
+    private TxnResponse buildTxnResponse(TransactionDTO txnDto) {
+        TxnResponse response = new TxnResponse();
+        response.setTxnStatus(txnDto.getTxnStatus());
+        response.setTxnReference(txnDto.getTxnReference());
+        return response;
     }
 
     @Override

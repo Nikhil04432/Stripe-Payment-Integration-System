@@ -4,6 +4,7 @@ import com.hulkhiretech.payments.dao.interfaces.TransactionDao;
 import com.hulkhiretech.payments.entity.TransactionEntity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.namedparam.BeanPropertySqlParameterSource;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -13,6 +14,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 @Slf4j
@@ -143,6 +145,53 @@ public class TransactionDaoImpl implements TransactionDao {
         int rowsUpdated = jdbcTemplate.update(sql, params);
         log.info("retryCount updated. Rows affected: {}", rowsUpdated);
         return rowsUpdated;
+    }
+
+    // -----------------------------------------------------------------------
+    // IDEMPOTENCY: findByMerchantTransactionReference
+    //
+    // This is called BEFORE inserting a new transaction.
+    // If a record already exists with this merchantTransactionReference,
+    // we return it wrapped in Optional.of(entity).
+    // If no record found, we return Optional.empty() — no exception thrown.
+    //
+    // WHY try-catch EmptyResultDataAccessException?
+    // queryForObject() throws this exception when 0 rows returned.
+    // We treat "0 rows" as a valid case (fresh request) — not an error.
+    // So we catch it and return Optional.empty() instead of letting it
+    // propagate as an exception.
+    // -----------------------------------------------------------------------
+    @Override
+    public Optional<TransactionEntity> findByMerchantTransactionReference(
+            String merchantTransactionReference) {
+
+        log.info("Idempotency check for merchantTransactionReference: {}",
+                merchantTransactionReference);
+
+        String sql = "SELECT * FROM payments.`Transaction` "
+                + "WHERE merchantTransactionReference = :merchantTransactionReference";
+
+        MapSqlParameterSource params = new MapSqlParameterSource();
+        params.addValue("merchantTransactionReference", merchantTransactionReference);
+
+        try {
+            TransactionEntity entity = jdbcTemplate.queryForObject(
+                    sql, params,
+                    new BeanPropertyRowMapper<>(TransactionEntity.class));
+
+            log.info("Duplicate found for merchantTransactionReference: {}. "
+                            + "Returning existing txnReference: {}",
+                    merchantTransactionReference, entity.getTxnReference());
+
+            return Optional.of(entity);
+
+        } catch (EmptyResultDataAccessException e) {
+            // This is NOT an error — it means no duplicate exists.
+            // This is the happy path for a fresh first-time request.
+            log.info("No duplicate found for merchantTransactionReference: {}. "
+                    + "Proceeding with new transaction.", merchantTransactionReference);
+            return Optional.empty();
+        }
     }
 
 }
